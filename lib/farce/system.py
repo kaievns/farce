@@ -29,7 +29,7 @@ class ActorSystem:
         if not actor in self.registry:
             raise FarceError("%s actor was not spawned yet" % actor.__name__)
 
-        future = asyncio.get_event_loop().create_future()
+        future = asyncio.create_task()
         stack = inspect.stack()
         caller = None
         if "self" in stack[1][0].f_locals:

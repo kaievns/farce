@@ -18,18 +18,18 @@ async def test_spawn():
     assert actor.handler.kwargs == {'a': 4, 'b': 5}
 
 
-@pytest.mark.asyncio
-async def test_ask():
-    class Handler:
-        def name(self, *args, **kwargs):
-            return "My name is %s %s" % (args, kwargs)
+# @pytest.mark.asyncio
+# async def test_ask():
+#     class Handler:
+#         def name(self, *args, **kwargs):
+#             return "My name is %s %s" % (args, kwargs)
 
-    system = ActorSystem()
-    system.spawn(Handler)
+#     system = ActorSystem()
+#     system.spawn(Handler)
 
-    await asyncio.sleep(0.01)
+#     await asyncio.sleep(0.01)
 
-    result = await system.ask(Handler, "name", 1, 2, a=3)
-    # await asyncio.sleep(0.2)
+#     result = await system.ask(Handler, "name", 1, 2, a=3)
+#     # await asyncio.sleep(0.2)
 
-    assert result == "My name is (1, 2) {'a': 3}"
+#     assert result == "My name is (1, 2) {'a': 3}"

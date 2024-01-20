@@ -1,32 +1,56 @@
+import random
 import asyncio
+from event_bus import EventBus
 from .message import Message
+
+bus = EventBus()
 
 
 class Stream:
     def __init__(self) -> None:
+        self.listeners = []
         self.iterators = []
         self.filters = []
 
-    def put(self, message: Message):
-        for iter in self.iterators:
-            iter.put(message)
+        self.key = f"stream:{random.random()}"
 
-        for [filter, stream] in self.filters:
-            if filter(message):
-                stream.put(message)
+        self._listen()
+
+    def put(self, message: Message):
+        bus.emit(self.key, message, threads=True)
 
     def filter(self, filter: callable):
         stream = Stream()
         self.filters.append([filter, stream])
         return stream
 
+    def pipe_to(self, listener: callable):
+        self.listeners.append(listener)
+
     def __aiter__(self):
         iterator = StreamIterator(self)
         self.iterators.append(iterator)
         return iterator
 
-    def remove(self, iterator):
+    def _remove(self, iterator):
         self.iterators.remove(iterator)
+
+    def _listen(self):
+        @bus.on(self.key)
+        def _pipe_to_listeners(message: Message):
+            for listener in self.listeners:
+                listener(message)
+
+        @bus.on(self.key)
+        def _pipe_to_iterators(message: Message):
+            for iter in self.iterators:
+                iter.put(message)
+
+        @bus.on(self.key)
+        def _pipe_downstream(message: Message):
+            for [filter, stream] in self.filters:
+                if filter(message):
+                    stream.put(message)
 
 
 class StreamIterator:
@@ -46,4 +70,4 @@ class StreamIterator:
             self.queue.task_done()
             return item
         except:  # asyncio.CancelledError:  # disconnections
-            self.parent.remove(self)
+            self.parent._remove(self)

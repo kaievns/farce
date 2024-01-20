@@ -24,6 +24,34 @@ class Mocky:
 
 
 @pytest.mark.asyncio
+async def test_pipes():
+    calls = []
+
+    stream = Stream()
+
+    stream.pipe_to(lambda m: calls.append(m))
+    stream.pipe_to(lambda m: calls.append(m))
+    stream.pipe_to(lambda m: calls.append(m))
+
+    stream.put("hello")
+    stream.put("there")
+
+    await asyncio.sleep(0.01)
+
+    assert calls == ['hello', 'hello', 'hello', 'there', 'there', 'there']
+
+    calls.clear()
+
+    stream.put("hello")
+    await asyncio.sleep(0.01)
+    stream.put("there")
+
+    await asyncio.sleep(0.01)
+
+    assert calls == ['hello', 'hello', 'hello', 'there', 'there', 'there']
+
+
+@pytest.mark.asyncio
 async def test_iterator():
     mock = Mocky()
 
@@ -55,18 +83,15 @@ async def test_iterator():
 
 @pytest.mark.asyncio
 async def test_filter():
-    calls = Mocky()
-    pings = Mocky()
-    pongs = Mocky()
+    calls = []
+    pings = []
+    pongs = []
 
     stream = Stream()
 
-    calls.listen(stream)
-
-    pings.listen(stream.filter(lambda x: x == "ping"))
-    pongs.listen(stream.filter(lambda x: x == "pong"))
-
-    await asyncio.sleep(0.002)
+    stream.pipe_to(lambda m: calls.append(m))
+    stream.filter(lambda x: x == "ping").pipe_to(lambda m: pings.append(m))
+    stream.filter(lambda x: x == "pong").pipe_to(lambda m: pongs.append(m))
 
     stream.put("ping")
     stream.put("pong")
@@ -75,6 +100,8 @@ async def test_filter():
 
     await asyncio.sleep(0.02)
 
-    assert calls.calls == ["ping", "pong", "ping", "pong"]
-    assert pings.calls == ["ping", "ping"]
-    assert pongs.calls == ["pong", "pong"]
+    print(calls, pings, pongs)
+
+    assert calls == ["ping", "pong", "ping", "pong"]
+    assert pings == ["ping", "ping"]
+    assert pongs == ["pong", "pong"]
