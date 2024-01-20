@@ -1,8 +1,11 @@
-from typing import Any, Optional
+from asyncio import Future
+from typing import Any, NamedTuple, Optional
 
 
-class Message:
-    sender: Optional[Any]
-    to: Optional[Any]
+class Message(NamedTuple):
+    caller: Optional[type[Any]]  # actor handler class
+    to: Optional[type[Any]]  # actor handler class
     subject: str
-    message: any
+    args: any
+    kwargs: any
+    future: Optional[Future]
