@@ -17,7 +17,7 @@ class Stream:
         self._listen()
 
     def put(self, message: Message):
-        bus.emit(self.key, message, threads=True)
+        bus.emit(self.key, message)
 
     def filter(self, filter: callable):
         stream = Stream()
