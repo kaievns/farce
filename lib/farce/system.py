@@ -15,15 +15,15 @@ class ActorSystem:
         self.stream = Stream()
         self.registry = {}
 
-    def spawn(self, actor: type[Any], *args, **kwargs) -> Actor:
+    def spawn(self, actor: type[Any], *args, **kwargs) -> None:
         if not actor in self.registry:
             self.registry[actor] = Actor(self, actor, *args, **kwargs)
-            return self.registry[actor]
         else:
             raise FarceError("Already spawned: %s" % actor.__name__)
 
     def send(self, subject: str, *args, **kwargs) -> None:
-        self.stream.put(Message(subject=subject, args=args, kwargs=kwargs))
+        self.stream.put(Message(subject=subject, args=args,
+                        kwargs=kwargs, caller=None, to=None, future=None))
 
     def ask(self, actor: type[Any], subject: str, *args, **kwargs) -> asyncio.Future:
         if not actor in self.registry:
@@ -49,12 +49,15 @@ class ActorSystem:
     def tell(self, actor: type[Any], subject: str, *args, **kwargs) -> None:
         self.ask(actor, subject, *args, **kwargs)
 
-    async def pipe(self, subject: str, actor: type[Any], method: str):
-        async for message in self.stream.filter(lambda m: m.subject == subject):
+    def pipe(self, subject: str, actor: type[Any], method: str):
+        def handler(message: Message):
             self.stream.put(Message(
                 caller=message.caller,
                 to=actor,
                 subject=method,
                 args=message.args,
-                kwargs=message.kwargs
+                kwargs=message.kwargs,
+                future=None
             ))
+
+        self.stream.filter(lambda m: m.subject == subject).pipe_to(handler)

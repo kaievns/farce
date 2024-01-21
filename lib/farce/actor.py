@@ -11,7 +11,7 @@ class Actor:
 
     def __init__(self, system: any, handler: type[Any], *args, **kwargs) -> None:
         self.inbox = system.stream.filter(lambda x: x.to == handler)
-        self.handler = handler(*args, **kwargs)
+        self.handler = handler(system, *args, **kwargs)
         self.system = system
 
         self.inbox.pipe_to(self.handle)
@@ -27,12 +27,17 @@ class Actor:
             kwargs = message.kwargs
             method = getattr(self.handler, name)
 
+            coro = None
+            if asyncio.iscoroutinefunction(method):
+                coro = method(*args, **kwargs)
+            else:
+                coro = asyncio.to_thread(method, *args, **kwargs)
+
             def done(task):
                 err = task.exception()
                 res = None if err else task.result()
                 self._done(message, err, res)
 
-            coro = asyncio.to_thread(method, *args, **kwargs)
             asyncio.create_task(coro).add_done_callback(done)
 
         except Exception as err:
