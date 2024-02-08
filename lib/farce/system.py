@@ -1,7 +1,7 @@
 import inspect
 import asyncio
 from typing import Any
-from .actor import Actor
+from .handler import Handler
 from .stream import Stream
 from .error import FarceError
 from .message import Message
@@ -9,7 +9,7 @@ from .message import Message
 
 class ActorSystem:
     stream: Stream
-    registry: dict[type[Any], Actor]
+    registry: dict[type[Any], Handler]
 
     def __init__(self) -> None:
         self.stream = Stream()
@@ -17,7 +17,7 @@ class ActorSystem:
 
     def spawn(self, actor: type[Any], *args, **kwargs) -> None:
         if not actor in self.registry:
-            self.registry[actor] = Actor(self, actor, *args, **kwargs)
+            self.registry[actor] = Handler(self, actor, *args, **kwargs)
         else:
             raise FarceError("Already spawned: %s" % actor.__name__)
 

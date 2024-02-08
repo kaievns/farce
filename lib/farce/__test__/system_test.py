@@ -3,7 +3,7 @@ import asyncio
 from .. import ActorSystem
 
 
-class Handler:
+class Actor:
     def __init__(self, *args, **kwargs) -> None:
         self.args = args
         self.kwargs = kwargs
@@ -26,20 +26,20 @@ class Handler:
 @pytest.mark.asyncio
 async def test_spawn():
     system = ActorSystem()
-    system.spawn(Handler, 1, 2, 3, a=4, b=5)
-    actor = system.registry[Handler]
+    system.spawn(Actor, 1, 2, 3, a=4, b=5)
+    handler = system.registry[Actor]
 
-    assert isinstance(actor.handler, Handler)
-    assert actor.handler.args == (system, 1, 2, 3)
-    assert actor.handler.kwargs == {'a': 4, 'b': 5}
+    assert isinstance(handler.actor, Actor)
+    assert handler.actor.args == (system, 1, 2, 3)
+    assert handler.actor.kwargs == {'a': 4, 'b': 5}
 
 
 @pytest.mark.asyncio
 async def test_ask():
     system = ActorSystem()
-    system.spawn(Handler)
+    system.spawn(Actor)
 
-    result = await system.ask(Handler, "name", 1, 2, a=3)
+    result = await system.ask(Actor, "name", 1, 2, a=3)
 
     assert result == "My name is (1, 2) {'a': 3}"
 
@@ -47,10 +47,10 @@ async def test_ask():
 @pytest.mark.asyncio
 async def test_ask_error():
     system = ActorSystem()
-    system.spawn(Handler)
+    system.spawn(Actor)
 
     try:
-        await system.ask(Handler, "fail", 1, 2, 3)
+        await system.ask(Actor, "fail", 1, 2, 3)
         assert False, "supposed to fail"
     except ValueError as err:
         assert f"{err}" == f"{ValueError('fail', 1, 2, 3)}"
@@ -59,26 +59,26 @@ async def test_ask_error():
 @pytest.mark.asyncio
 async def test_no_method_error():
     system = ActorSystem()
-    system.spawn(Handler)
+    system.spawn(Actor)
 
     try:
-        await system.ask(Handler, "non_existing", 1, 2, 3)
+        await system.ask(Actor, "non_existing", 1, 2, 3)
         assert False, "supposed to fail"
     except AttributeError as err:
-        assert f"{err}" == "'Handler' object has no attribute 'non_existing'"
+        assert f"{err}" == "'Actor' object has no attribute 'non_existing'"
 
 
 @pytest.mark.asyncio
 async def test_async_handlers():
     system = ActorSystem()
-    system.spawn(Handler)
+    system.spawn(Actor)
 
-    result = await system.ask(Handler, "async_task", 1, 2, 3, a=4, b=5)
+    result = await system.ask(Actor, "async_task", 1, 2, 3, a=4, b=5)
 
     assert result == "async task (1, 2, 3), {'a': 4, 'b': 5}"
 
     try:
-        await system.ask(Handler, "async_fail", 'a', 'b')
+        await system.ask(Actor, "async_fail", 'a', 'b')
         assert False, "supposed to fail"
     except ValueError as err:
         assert f"{err}" == "('async fail', 'a', 'b')"
@@ -88,7 +88,7 @@ async def test_async_handlers():
 async def test_pipe():
     calls = []
 
-    class Handler:
+    class Actor:
         def __init__(self, system: ActorSystem) -> None:
             pass
 
@@ -96,9 +96,9 @@ async def test_pipe():
             calls.append([args, kwargs])
 
     system = ActorSystem()
-    system.spawn(Handler)
+    system.spawn(Actor)
 
-    system.pipe("ping", Handler, "test")
+    system.pipe("ping", Actor, "test")
 
     system.send("ping", 1, 2, a=3)
     system.send("pong", 2, 3, b=4)
