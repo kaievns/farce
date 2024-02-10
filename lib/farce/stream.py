@@ -10,6 +10,7 @@ class Stream:
     def __init__(self) -> None:
         self.listeners = []
         self.iterators = []
+        self.mappings = []
         self.filters = []
 
         self.key = f"stream:{random.random()}"
@@ -19,13 +20,19 @@ class Stream:
     def put(self, message: Message):
         bus.emit(self.key, message)
 
+    def pipe_to(self, listener: callable):
+        self.listeners.append(listener)
+        return self
+
     def filter(self, filter: callable):
         stream = Stream()
         self.filters.append([filter, stream])
         return stream
 
-    def pipe_to(self, listener: callable):
-        self.listeners.append(listener)
+    def map(self, map: callable):
+        stream = Stream()
+        self.mappings.append([map, stream])
+        return stream
 
     def __aiter__(self):
         iterator = StreamIterator(self)
@@ -45,6 +52,11 @@ class Stream:
         def _pipe_to_iterators(message: Message):
             for iter in self.iterators:
                 iter.put(message)
+
+        @bus.on(self.key)
+        def _pipe_to_mappings(message: Message):
+            for [mapping, stream] in self.mappings:
+                stream.put(mapping(message))
 
         @bus.on(self.key)
         def _pipe_downstream(message: Message):

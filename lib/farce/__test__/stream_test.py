@@ -100,8 +100,26 @@ async def test_filter():
 
     await asyncio.sleep(0.02)
 
-    print(calls, pings, pongs)
-
     assert calls == ["ping", "pong", "ping", "pong"]
     assert pings == ["ping", "ping"]
     assert pongs == ["pong", "pong"]
+
+
+@pytest.mark.asyncio
+async def test_filter():
+    calls = []
+
+    stream = Stream()
+
+    stream.map(lambda x: f"{x}ed").pipe_to(lambda m: calls.append(m))
+
+    stream.put("ping")
+    stream.put("pong")
+    stream.put("ping")
+    stream.put("pong")
+
+    await asyncio.sleep(0.02)
+
+    print(calls)
+
+    assert calls == ["pinged", "ponged", "pinged", "ponged"]
