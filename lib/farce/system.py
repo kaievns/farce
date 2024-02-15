@@ -1,4 +1,3 @@
-import inspect
 import asyncio
 from typing import Any
 from .handler import Handler
@@ -23,26 +22,23 @@ class ActorSystem:
 
     def send(self, subject: str, *args, **kwargs) -> None:
         self.stream.put(Message(subject=subject, args=args,
-                        kwargs=kwargs, caller=None, to=None, future=None))
+                        kwargs=kwargs, to=None, future=None))
 
     def ask(self, actor: type[Any], subject: str, *args, **kwargs) -> asyncio.Future:
         if not actor in self.registry:
             raise FarceError("%s actor was not spawned yet" % actor.__name__)
 
-        future = asyncio.get_event_loop().create_future()
-        stack = inspect.stack()
-        caller = None
-        if "self" in stack[1][0].f_locals:
-            caller = stack[1][0].f_locals["self"].__class__
+        loop = asyncio.get_event_loop()
+        future = loop.create_future()
 
         self.stream.put(Message(
-            caller=caller,
             to=actor,
             subject=subject,
             args=args,
             kwargs=kwargs,
             future=future
         ))
+
         return future
 
     # essentially a non async alias for ask
@@ -52,7 +48,6 @@ class ActorSystem:
     def pipe(self, subject: str, actor: type[Any], method: str):
         def handler(message: Message):
             self.stream.put(Message(
-                caller=message.caller,
                 to=actor,
                 subject=method,
                 args=message.args,

@@ -27,7 +27,6 @@ class Handler:
             kwargs = message.kwargs
             method = getattr(self.actor, name)
 
-            coro = None
             if asyncio.iscoroutinefunction(method):
                 coro = method(*args, **kwargs)
             else:
@@ -39,6 +38,7 @@ class Handler:
                 self._done(message, err, res)
 
             asyncio.create_task(coro).add_done_callback(done)
+            asyncio.gather(asyncio.sleep(0))  # breaking the loop
 
         except Exception as err:
             self._done(message, err)
