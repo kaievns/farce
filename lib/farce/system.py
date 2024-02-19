@@ -28,8 +28,9 @@ class ActorSystem:
         if not actor in self.registry:
             raise FarceError("%s actor was not spawned yet" % actor.__name__)
 
-        loop = asyncio.get_event_loop()
-        future = loop.create_future()
+        # loop = asyncio.get_event_loop()
+        # future = loop.create_future()
+        future = self._make_future()
 
         self.stream.put(Message(
             to=actor,
@@ -56,3 +57,15 @@ class ActorSystem:
             ))
 
         self.stream.filter(lambda m: m.subject == subject).pipe_to(handler)
+
+    def _make_future(self):
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError as e:
+            if str(e).startswith('There is no current event loop in thread'):
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            else:
+                raise
+
+        return loop.create_future()

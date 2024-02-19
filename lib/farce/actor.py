@@ -7,18 +7,13 @@ class Meta(type):
         klass = None
 
         def create_wrapper(name, original):
-            if asyncio.iscoroutinefunction(original):
-                async def wrapper(self, *args, **kwargs):
-                    if isinstance(self, ActorSystem):
-                        return await self.ask(klass, name, *args, **kwargs)
-                    else:
-                        return await original(self, *args, **kwargs)
-            else:
-                def wrapper(self, *args, **kwargs):
-                    if isinstance(self, ActorSystem):
-                        return self.ask(klass, name, *args, **kwargs)
-                    else:
-                        return original(self, *args, **kwargs)
+            def wrapper(self, *args, **kwargs):
+                if isinstance(self, ActorSystem):
+                    return self.ask(klass, name, *args, **kwargs)
+                else:
+                    return original(self, *args, **kwargs)
+
+            setattr(wrapper, "original", original)
 
             return wrapper
 

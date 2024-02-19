@@ -26,8 +26,9 @@ class Handler:
             args = message.args
             kwargs = message.kwargs
             method = getattr(self.actor, name)
+            original = getattr(method, "original", method)
 
-            if asyncio.iscoroutinefunction(method):
+            if asyncio.iscoroutinefunction(original):
                 coro = method(*args, **kwargs)
             else:
                 coro = asyncio.to_thread(method, *args, **kwargs)
@@ -37,8 +38,7 @@ class Handler:
                 res = None if err else task.result()
                 self._done(message, err, res)
 
-            asyncio.create_task(coro).add_done_callback(done)
-            asyncio.gather(asyncio.sleep(0))  # breaking the loop
+            self._create_task(coro).add_done_callback(done)
 
         except Exception as err:
             self._done(message, err)
@@ -49,3 +49,16 @@ class Handler:
                 message.future.set_exception(err)
             else:
                 message.future.set_result(result)
+
+    def _create_task(self, coro):
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError as e:
+            if str(e).startswith('There is no current event loop in thread'):
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.create_task
+            else:
+                raise
+
+        return asyncio.run_coroutine_threadsafe(coro, loop)
