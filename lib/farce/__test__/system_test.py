@@ -1,9 +1,9 @@
 import pytest
 import asyncio
-from .. import ActorSystem
+from .. import ActorSystem, Actor as BaseActor
 
 
-class Actor:
+class Actor(BaseActor):
     def __init__(self, *args, **kwargs) -> None:
         self.args = args
         self.kwargs = kwargs
@@ -39,7 +39,7 @@ async def test_ask():
     system = ActorSystem()
     system.spawn(Actor)
 
-    result = await system.ask(Actor, "name", 1, 2, a=3)
+    result = await Actor.name(system, 1, 2, a=3)
 
     assert result == "My name is (1, 2) {'a': 3}"
 
@@ -50,22 +50,10 @@ async def test_ask_error():
     system.spawn(Actor)
 
     try:
-        await system.ask(Actor, "fail", 1, 2, 3)
+        await Actor.fail(system, 1, 2, 3)
         assert False, "supposed to fail"
     except ValueError as err:
         assert f"{err}" == f"{ValueError('fail', 1, 2, 3)}"
-
-
-@pytest.mark.asyncio
-async def test_no_method_error():
-    system = ActorSystem()
-    system.spawn(Actor)
-
-    try:
-        await system.ask(Actor, "non_existing", 1, 2, 3)
-        assert False, "supposed to fail"
-    except AttributeError as err:
-        assert f"{err}" == "'Actor' object has no attribute 'non_existing'"
 
 
 @pytest.mark.asyncio
@@ -73,12 +61,12 @@ async def test_async_handlers():
     system = ActorSystem()
     system.spawn(Actor)
 
-    result = await system.ask(Actor, "async_task", 1, 2, 3, a=4, b=5)
+    result = await Actor.async_task(system, 1, 2, 3, a=4, b=5)
 
     assert result == "async task (1, 2, 3), {'a': 4, 'b': 5}"
 
     try:
-        await system.ask(Actor, "async_fail", 'a', 'b')
+        await Actor.async_fail(system, 'a', 'b')
         assert False, "supposed to fail"
     except ValueError as err:
         assert f"{err}" == "('async fail', 'a', 'b')"
@@ -88,7 +76,7 @@ async def test_async_handlers():
 async def test_pipe():
     calls = []
 
-    class Actor:
+    class Actor(BaseActor):
         def __init__(self, system: ActorSystem) -> None:
             pass
 
@@ -112,26 +100,17 @@ async def test_pipe():
 
 @pytest.mark.asyncio
 async def test_interactions():
-    class ActorA:
-        def __init__(self, system: ActorSystem) -> None:
-            self.system = system
-
+    class ActorA(BaseActor):
         async def test(self):
-            res = await self.system.ask(ActorB, "test")
+            res = await ActorB.test(system)
             return f"A > {res}"
 
-    class ActorB:
-        def __init__(self, system: ActorSystem) -> None:
-            self.system = system
-
+    class ActorB(BaseActor):
         async def test(self):
-            res = await self.system.ask(ActorC, "test")
+            res = await ActorC.test(system)
             return f"B > {res}"
 
-    class ActorC:
-        def __init__(self, system: ActorSystem) -> None:
-            self.system = system
-
+    class ActorC(BaseActor):
         def test(self):
             return "C"
 
@@ -140,6 +119,6 @@ async def test_interactions():
     system.spawn(ActorB)
     system.spawn(ActorC)
 
-    res = await system.ask(ActorA, "test")
+    res = await ActorA.test(system)
 
     assert res == "A > B > C"

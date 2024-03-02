@@ -27,7 +27,7 @@ async def test_actor():
     assert isinstance(result[0], Thing)
     assert result[1:] == [1, 2, 3]
 
-    result = await system.ask(Thing, "hello", 2, 3, 4)
+    result = await Thing.hello(system, 2, 3, 4)
 
     assert isinstance(result[0], Thing)
     assert result[1:] == [2, 3, 4]
@@ -38,7 +38,7 @@ async def test_actor():
 
     calls.clear()
 
-    system.tell(Thing, "asyncy", 1, 2, 3)
+    Thing.asyncy(system, 1, 2, 3)
 
     await asyncio.sleep(0.1)
 
