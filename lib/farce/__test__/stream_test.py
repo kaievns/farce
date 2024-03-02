@@ -52,6 +52,42 @@ async def test_pipes():
 
 
 @pytest.mark.asyncio
+async def test_async_pipes():
+    calls = []
+
+    async def async_receiver(m):
+        await asyncio.sleep(0)
+        calls.append(m)
+
+    stream = Stream()
+
+    stream.pipe_to(lambda m: calls.append(m))
+    stream.pipe_to(lambda m: calls.append(m))
+    stream.pipe_to(async_receiver)
+
+    stream.put("hello")
+    stream.put("there")
+
+    await asyncio.sleep(0.01)
+
+    # two sync calls followed by an async call
+    assert calls == ['hello', 'hello', 'there', 'there', 'hello', 'there']
+
+    calls.clear()
+
+    stream.put("hello")
+    await asyncio.sleep(0.01)
+    stream.put("there")
+
+    await asyncio.sleep(0.01)
+
+    print(calls)
+
+    # the async calls land at the end of each batch
+    assert calls == ['hello', 'hello', 'hello', 'there', 'there', 'there']
+
+
+@pytest.mark.asyncio
 async def test_iterator():
     mock = Mocky()
 
@@ -106,7 +142,7 @@ async def test_filter():
 
 
 @pytest.mark.asyncio
-async def test_filter():
+async def test_another_filter():
     calls = []
 
     stream = Stream()

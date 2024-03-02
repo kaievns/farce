@@ -46,7 +46,9 @@ class Stream:
         @bus.on(self.key)
         def _pipe_to_listeners(message: Message):
             for listener in self.listeners:
-                listener(message)
+                res = listener(message)
+                if asyncio.iscoroutine(res):
+                    asyncio.create_task(res)
 
         @bus.on(self.key)
         def _pipe_to_iterators(message: Message):

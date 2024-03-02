@@ -3,7 +3,7 @@ from typing import Any
 from .handler import Handler
 from .stream import Stream
 from .error import FarceError
-from .message import Message
+from .message import Message, MethodCall
 
 
 class ActorSystem:
@@ -20,24 +20,24 @@ class ActorSystem:
         else:
             raise FarceError("Already spawned: %s" % actor.__name__)
 
-    def send(self, subject: str, *args, **kwargs) -> None:
-        self.stream.put(Message(subject=subject, args=args,
-                        kwargs=kwargs, to=None, future=None))
+    def send(self, subject: str, body: any) -> None:
+        self.stream.put(Message(to=None, subject=subject, body=body))
 
     def ask(self, actor: type[Any], subject: str, *args, **kwargs) -> asyncio.Future:
         if not actor in self.registry:
             raise FarceError("%s actor was not spawned yet" % actor.__name__)
 
-        # loop = asyncio.get_event_loop()
-        # future = loop.create_future()
-        future = self._make_future()
+        # future = self._make_future()
+        future = asyncio.get_event_loop().create_future()
 
         self.stream.put(Message(
             to=actor,
             subject=subject,
-            args=args,
-            kwargs=kwargs,
-            future=future
+            body=MethodCall(
+                args=args,
+                kwargs=kwargs,
+                future=future
+            )
         ))
 
         return future
@@ -51,9 +51,11 @@ class ActorSystem:
             self.stream.put(Message(
                 to=actor,
                 subject=method,
-                args=message.args,
-                kwargs=message.kwargs,
-                future=None
+                body=MethodCall(
+                    args=[message.body],
+                    kwargs={},
+                    future=None
+                )
             ))
 
         self.stream.filter(lambda m: m.subject == subject).pipe_to(handler)

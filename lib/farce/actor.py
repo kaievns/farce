@@ -1,8 +1,11 @@
-import asyncio
 from .system import ActorSystem
 
 
 class Meta(type):
+    """
+    this thing here basically wraps all o/g actor methods so that they could be
+    called as static methods from the outside
+    """
     def __new__(cls, name, bases, attrs, **kwargs):
         klass = None
 

@@ -23,8 +23,8 @@ class Handler:
     def handle(self, message: Message):
         try:
             name = message.subject
-            args = message.args
-            kwargs = message.kwargs
+            args = message.body.args
+            kwargs = message.body.kwargs
             method = getattr(self.actor, name)
             original = getattr(method, "original", method)
 
@@ -44,11 +44,14 @@ class Handler:
             self._done(message, err)
 
     def _done(self, message: Message, err: Exception = None, result: any = None):
-        if hasattr(message, "future") and message.future != None:
+        future = message.body.future
+        if future != None:
             if err != None:
-                message.future.set_exception(err)
+                future.set_exception(err)
             else:
-                message.future.set_result(result)
+                future.set_result(result)
+        elif err != None:
+            raise err
 
     def _create_task(self, coro):
         try:
@@ -57,7 +60,6 @@ class Handler:
             if str(e).startswith('There is no current event loop in thread'):
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                loop.create_task
             else:
                 raise
 

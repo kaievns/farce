@@ -100,14 +100,14 @@ async def test_pipe():
 
     system.pipe("ping", Actor, "test")
 
-    system.send("ping", 1, 2, a=3)
-    system.send("pong", 2, 3, b=4)
-    system.send("ping", 3, 4, c=5)
-    system.send("test", 4, 5, d=6)
+    system.send("ping", 1)
+    system.send("pong", 2)
+    system.send("ping", 3)
+    system.send("test", 4)
 
     await asyncio.sleep(0.02)
 
-    assert calls == [[(1, 2), {'a': 3}], [(3, 4), {'c': 5}]]
+    assert calls == [[(1,), {}], [(3,), {}]]
 
 
 @pytest.mark.asyncio
