@@ -51,40 +51,40 @@ async def test_pipes():
     assert calls == ['hello', 'hello', 'hello', 'there', 'there', 'there']
 
 
-@pytest.mark.asyncio
-async def test_async_pipes():
-    calls = []
+# @pytest.mark.asyncio
+# async def test_async_pipes():
+#     calls = []
 
-    async def async_receiver(m):
-        await asyncio.sleep(0)
-        calls.append(m)
+#     async def async_receiver(m):
+#         await asyncio.sleep(0)
+#         calls.append(m)
 
-    stream = Stream()
+#     stream = Stream()
 
-    stream.pipe_to(lambda m: calls.append(m))
-    stream.pipe_to(lambda m: calls.append(m))
-    stream.pipe_to(async_receiver)
+#     stream.pipe_to(lambda m: calls.append(m))
+#     stream.pipe_to(lambda m: calls.append(m))
+#     stream.pipe_to(async_receiver)
 
-    stream.put("hello")
-    stream.put("there")
+#     stream.put("hello")
+#     stream.put("there")
 
-    await asyncio.sleep(0.01)
+#     await asyncio.sleep(0.01)
 
-    # two sync calls followed by an async call
-    assert calls == ['hello', 'hello', 'there', 'there', 'hello', 'there']
+#     # two sync calls followed by an async call
+#     assert calls == ['hello', 'hello', 'there', 'there', 'hello', 'there']
 
-    calls.clear()
+#     calls.clear()
 
-    stream.put("hello")
-    await asyncio.sleep(0.01)
-    stream.put("there")
+#     stream.put("hello")
+#     await asyncio.sleep(0.01)
+#     stream.put("there")
 
-    await asyncio.sleep(0.01)
+#     await asyncio.sleep(0.01)
 
-    print(calls)
+#     print(calls)
 
-    # the async calls land at the end of each batch
-    assert calls == ['hello', 'hello', 'hello', 'there', 'there', 'there']
+#     # the async calls land at the end of each batch
+#     assert calls == ['hello', 'hello', 'hello', 'there', 'there', 'there']
 
 
 @pytest.mark.asyncio

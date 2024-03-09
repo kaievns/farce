@@ -78,10 +78,14 @@ async def test_pipe():
 
     class Actor(BaseActor):
         def __init__(self, system: ActorSystem) -> None:
-            pass
+            super().__init__(system)
+            system.pipe("pong", self.__class__, "save")
 
         def test(self, *args, **kwargs):
             calls.append([args, kwargs])
+
+        def save(self, *args, **kwargs):
+            print("save", *args, **kwargs)
 
     system = ActorSystem()
     system.spawn(Actor)
@@ -92,6 +96,7 @@ async def test_pipe():
     system.send("pong", 2)
     system.send("ping", 3)
     system.send("test", 4)
+    system.send("pong", 5)
 
     await asyncio.sleep(0.02)
 

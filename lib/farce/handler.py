@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import Future
 from typing import Any
 from .stream import Stream
 from .message import Message
@@ -25,6 +26,7 @@ class Handler:
             name = message.subject
             args = message.body.args
             kwargs = message.body.kwargs
+            future = message.body.future
             method = getattr(self.actor, name)
             original = getattr(method, "original", method)
 
@@ -36,31 +38,28 @@ class Handler:
             def done(task):
                 err = task.exception()
                 res = None if err else task.result()
-                self._done(message, err, res)
+                self._done(future, err, res)
 
-            self._create_task(coro).add_done_callback(done)
+            loop = future.get_loop()
+
+            try:
+                current_loop = asyncio.get_event_loop()
+            except:
+                current_loop = None
+
+            if loop == current_loop:
+                task = loop.create_task(coro)
+            else:
+                task = asyncio.run_coroutine_threadsafe(coro, loop)
+
+            task.add_done_callback(done)
 
         except Exception as err:
-            self._done(message, err)
+            self._done(future, err)
 
-    def _done(self, message: Message, err: Exception = None, result: any = None):
-        future = message.body.future
-        if future != None:
-            if err != None:
-                future.set_exception(err)
-            else:
-                future.set_result(result)
-        elif err != None:
-            raise err
-
-    def _create_task(self, coro):
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError as e:
-            if str(e).startswith('There is no current event loop in thread'):
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            else:
-                raise
-
-        return asyncio.run_coroutine_threadsafe(coro, loop)
+    def _done(self, future: Future, err: Exception = None, result: any = None):
+        if err != None:
+            future.set_exception(err)
+            self.system.logger.error(err)
+        else:
+            future.set_result(result)

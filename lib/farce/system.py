@@ -3,16 +3,22 @@ from typing import Any
 from .handler import Handler
 from .stream import Stream
 from .error import FarceError
+from .logger import Logger
 from .message import Message, MethodCall
 
 
 class ActorSystem:
+    logger: Logger
     stream: Stream
     registry: dict[type[Any], Handler]
+    loop: asyncio.AbstractEventLoop
 
     def __init__(self) -> None:
+        self.logger = Logger()
         self.stream = Stream()
         self.registry = {}
+
+        self.loop = asyncio.get_event_loop()
 
     def spawn(self, actor: type[Any], *args, **kwargs) -> None:
         if not actor in self.registry:
@@ -23,16 +29,15 @@ class ActorSystem:
     def send(self, subject: str, body: any) -> None:
         self.stream.put(Message(to=None, subject=subject, body=body))
 
-    def ask(self, actor: type[Any], subject: str, *args, **kwargs) -> asyncio.Future:
+    def ask(self, actor: type[Any], method: str, *args, **kwargs) -> asyncio.Future:
         if not actor in self.registry:
             raise FarceError("%s actor was not spawned yet" % actor.__name__)
 
-        # future = self._make_future()
-        future = asyncio.get_event_loop().create_future()
+        future = self.loop.create_future()
 
         self.stream.put(Message(
             to=actor,
-            subject=subject,
+            subject=method,
             body=MethodCall(
                 args=args,
                 kwargs=kwargs,
@@ -54,20 +59,8 @@ class ActorSystem:
                 body=MethodCall(
                     args=[message.body],
                     kwargs={},
-                    future=None
+                    future=self.loop.create_future()
                 )
             ))
 
         self.stream.filter(lambda m: m.subject == subject).pipe_to(handler)
-
-    def _make_future(self):
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError as e:
-            if str(e).startswith('There is no current event loop in thread'):
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            else:
-                raise
-
-        return loop.create_future()
