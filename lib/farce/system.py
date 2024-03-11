@@ -1,4 +1,5 @@
 import asyncio
+from threading import Thread
 from typing import Any
 from .handler import Handler
 from .stream import Stream
@@ -34,8 +35,7 @@ class ActorSystem:
             raise FarceError("%s actor was not spawned yet" % actor.__name__)
 
         future = self.loop.create_future()
-
-        self.stream.put(Message(
+        message = Message(
             to=actor,
             subject=method,
             body=MethodCall(
@@ -43,7 +43,10 @@ class ActorSystem:
                 kwargs=kwargs,
                 future=future
             )
-        ))
+        )
+
+        # publishing the message in a separate thread
+        Thread(target=self.stream.put, args=[message]).start()
 
         return future
 

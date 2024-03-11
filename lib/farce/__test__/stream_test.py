@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+from datetime import datetime
 from ..stream import Stream
 
 
@@ -85,6 +86,32 @@ async def test_pipes():
 
 #     # the async calls land at the end of each batch
 #     assert calls == ['hello', 'hello', 'hello', 'there', 'there', 'there']
+
+
+@pytest.mark.asyncio
+async def test_deduper():
+    mock = Mocky()
+
+    stream = Stream()
+
+    mock.listen(stream.dedupe())
+
+    await asyncio.sleep(0.001)
+
+    stream.put(1)
+    stream.put(1)
+    stream.put(1)
+    stream.put(2)
+    stream.put(1)
+    stream.put(2)
+    stream.put(2)
+    stream.put(2)
+    stream.put(3)
+    stream.put(2)
+
+    await asyncio.sleep(0.01)
+
+    assert mock.calls == [1, 2, 1, 2, 3, 2]
 
 
 @pytest.mark.asyncio

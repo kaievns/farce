@@ -1,3 +1,4 @@
+import copy
 import random
 import asyncio
 from event_bus import EventBus
@@ -17,7 +18,7 @@ class Stream:
                 iter.put(message)
 
     def put(self, message: Message):
-        bus.emit(self.key, message, threads=True)
+        bus.emit(self.key, message)
 
     def pipe_to(self, listener: callable):
         # if asyncio.iscoroutinefunction(listener):
@@ -40,7 +41,7 @@ class Stream:
         stream = Stream()
 
         @bus.on(self.key)
-        def handler(message):
+        def filterer(message):
             if filter(message):
                 stream.put(message)
 
@@ -50,8 +51,20 @@ class Stream:
         stream = Stream()
 
         @bus.on(self.key)
-        def handler(message):
+        def mapper(message):
             stream.put(map(message))
+
+        return stream
+
+    def dedupe(self):
+        stream = Stream()
+        stream.prev_value = None
+
+        @bus.on(self.key)
+        def dedupper(value):
+            if value != stream.prev_value:
+                stream.prev_value = value
+                stream.put(value)
 
         return stream
 
