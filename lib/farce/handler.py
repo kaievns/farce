@@ -11,11 +11,22 @@ class Handler:
     system: any
 
     def __init__(self, system: any, actor: type[Any], *args, **kwargs) -> None:
-        self.inbox = system.stream.filter(lambda x: x.to is actor)
+        self.inbox = asyncio.Queue()
         self.actor = actor(system, *args, **kwargs)
         self.system = system
 
-        self.inbox.pipe_to(self.handle)
+        system.stream.filter(lambda x: x.to is actor).pipe_to(
+            lambda m: self.inbox.put_nowait(m))
+
+        asyncio.create_task(self.listen())
+
+    async def listen(self):
+        while True:
+            message = await self.inbox.get()
+            try:
+                await self.handle(message)
+            except Exception as err:
+                pass
 
     def handle(self, message: Message):
         # since the original System#ask sent a message in a thread
@@ -35,6 +46,8 @@ class Handler:
         task = asyncio.run_coroutine_threadsafe(coro, future.get_loop())
 
         task.add_done_callback(self.call_after(future))
+
+        return future
 
     def async_wrap(self, method, name):
         async def wrap(*args, **kwargs):
