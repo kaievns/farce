@@ -14,7 +14,7 @@ class Logger:
 
     def error(self, err: Exception | str):
         if isinstance(err, Exception):
-            err = ''.join(traceback.format_exception(err))
+            err = f"{err}\n{''.join(traceback.format_exception(err))}"
         print(Fore.RED + "ERROR" + Fore.RESET + ":", err)
 
     def log(self, smth: any):
