@@ -23,10 +23,11 @@ class Handler:
     async def listen(self):
         while True:
             message = await self.inbox.get()
+
             try:
-                await self.handle(message)
+                self.handle(message)
             except Exception as err:
-                pass
+                self.system.logger.error(err)
 
     def handle(self, message: Message):
         # since the original System#ask sent a message in a thread
