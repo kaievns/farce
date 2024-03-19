@@ -32,3 +32,10 @@ class Meta(type):
 class Actor(metaclass=Meta):
     def __init__(self, system: ActorSystem) -> None:
         self.system = system
+        self.on_start()
+
+    def on_start(self):
+        pass
+
+    def on_message(self, message):
+        pass

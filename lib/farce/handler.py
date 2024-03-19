@@ -1,8 +1,16 @@
 import asyncio
 from concurrent.futures import Future
-from typing import Any
+from typing import Any, Generator
 from .stream import Stream
 from .message import Message
+
+
+def tick(callable):
+    if isinstance(callable, Generator):
+        try:
+            next(callable)
+        except StopIteration:
+            pass
 
 
 class Handler:
@@ -30,6 +38,9 @@ class Handler:
                 self.system.logger.error(err)
 
     def handle(self, message: Message):
+        middleware = self.actor.on_message(message)
+        tick(middleware)
+
         # since the original System#ask sent a message in a thread
         # we're already in an off-loop thread and can call blocking
         # methods as is. and then report them as a threadsafe coroutine
@@ -46,7 +57,7 @@ class Handler:
         coro = method(*args, **kwargs)
         task = asyncio.run_coroutine_threadsafe(coro, future.get_loop())
 
-        task.add_done_callback(self.call_after(future))
+        task.add_done_callback(self.call_after(future, middleware))
 
         return future
 
@@ -55,8 +66,10 @@ class Handler:
             return method(*args, **kwargs)
         return wrap
 
-    def call_after(self, future: Future):
+    def call_after(self, future: Future, middleware: callable):
         def done(task):
+            tick(middleware)  # triggering the middleware
+
             err = task.exception()
             if err != None:
                 future.set_exception(err)
