@@ -40,20 +40,7 @@ class Stream:
         bus.emit(self.key, message)
 
     def pipe_to(self, listener: callable):
-        # if asyncio.iscoroutinefunction(listener):
-        #     @bus.on(self.key)
-        #     def handler(message):
-        #         try:
-        #             loop = asyncio.get_event_loop()
-        #         except:
-        #             loop = asyncio.new_event_loop()
-        #             asyncio.set_event_loop(loop)
-        #         asyncio.create_task(listener(message))
-        # else:
-        @bus.on(self.key)
-        def handler(message):
-            listener(message)
-
+        self.listeners.append(listener)
         return self
 
     def filter(self, filter: callable):
