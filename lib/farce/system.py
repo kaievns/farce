@@ -22,7 +22,7 @@ class ActorSystem:
         self.loop = asyncio.get_event_loop()
 
     def spawn(self, actor: type[Any], *args, **kwargs) -> None:
-        if not actor in self.registry:
+        if actor not in self.registry:
             self.registry[actor] = Handler(self, actor, *args, **kwargs)
         else:
             raise FarceError("Already spawned: %s" % actor.__name__)
@@ -31,7 +31,7 @@ class ActorSystem:
         self.stream.put(Message(to=None, subject=subject, body=body))
 
     def ask(self, actor: type[Any], method: str, *args, **kwargs) -> asyncio.Future:
-        if not actor in self.registry:
+        if actor not in self.registry:
             raise FarceError("%s actor was not spawned yet" % actor.__name__)
 
         future = self.loop.create_future()
