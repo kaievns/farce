@@ -1,6 +1,6 @@
 import asyncio
 from threading import Thread
-from typing import Any
+from typing import Any, Callable
 from .handler import Handler
 from .stream import Stream
 from .error import FarceError
@@ -54,7 +54,7 @@ class ActorSystem:
     def tell(self, actor: type[Any], subject: str, *args, **kwargs) -> None:
         self.ask(actor, subject, *args, **kwargs)
 
-    def pipe(self, subject: str, actor: type[Any], method: str):
+    def forward(self, subject: str, actor: type[Any], method: str):
         def handler(message: Message):
             self.stream.put(Message(
                 to=actor,
@@ -67,3 +67,7 @@ class ActorSystem:
             ))
 
         self.stream.filter(lambda m: m.subject == subject).pipe_to(handler)
+
+    def pipe(self, subject: str, callback: Callable[[Any], None]):
+        self.stream.filter(lambda m: m.subject == subject).pipe_to(
+            lambda m: callback(m.body))

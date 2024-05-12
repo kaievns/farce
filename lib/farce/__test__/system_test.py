@@ -73,13 +73,13 @@ async def test_async_handlers():
 
 
 @pytest.mark.asyncio
-async def test_pipe():
+async def test_forward():
     calls = []
 
     class Actor(BaseActor):
         def __init__(self, system: ActorSystem) -> None:
             super().__init__(system)
-            system.pipe("pong", self.__class__, "save")
+            system.forward("pong", self.__class__, "save")
 
         def test(self, *args, **kwargs):
             calls.append([args, kwargs])
@@ -90,7 +90,7 @@ async def test_pipe():
     system = ActorSystem()
     system.spawn(Actor)
 
-    system.pipe("ping", Actor, "test")
+    system.forward("ping", Actor, "test")
 
     system.send("ping", 1)
     system.send("pong", 2)
