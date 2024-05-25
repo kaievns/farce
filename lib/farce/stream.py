@@ -18,7 +18,10 @@ class Stream:
         @bus.on(self.key)
         def pipe_to_listeners(message):
             for func in self.listeners:
-                func(message)
+                if asyncio.iscoroutinefunction(func):
+                    asyncio.create_task(func(message))
+                else:
+                    func(message)
 
         @bus.on(self.key)
         def pipe_to_filters(message):
